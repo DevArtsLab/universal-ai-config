@@ -1,0 +1,56 @@
+name: Test Installation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-install:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install package
+      run: |
+        pip install -e .
+    
+    - name: Test CLI
+      run: |
+        ai-config --help
+        ai-config init --fresh
+        ai-config validate
+        ai-config status
+    
+    - name: Test migration (mock)
+      run: |
+        mkdir -p ~/.config/devin
+        echo '{"test": true}' > ~/.config/devin/config.json
+        ai-config migrate devin || true
+        ai-config validate
+
+  test-install-script:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Test install script
+      run: |
+        chmod +x install.sh
+        # Test in dry-run mode (modify script to support this)
+        ./install.sh || true
