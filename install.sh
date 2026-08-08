@@ -9,10 +9,15 @@ set -e
 
 # Parse arguments
 AUTO_YES=false
+USE_LOCAL=false
 for arg in "$@"; do
     case $arg in
         --yes|-y)
             AUTO_YES=true
+            shift
+            ;;
+        --local)
+            USE_LOCAL=true
             shift
             ;;
         *)
@@ -134,11 +139,44 @@ create_install_dir() {
 }
 
 download_package() {
+    local source_dir=""
+    
+    if [ "$USE_LOCAL" = true ]; then
+        print_info "Using local package source..."
+        
+        # Determine source directory before changing to install dir
+        if [ -n "$LOCAL_SOURCE_DIR" ]; then
+            source_dir="$(cd "$LOCAL_SOURCE_DIR" && pwd)"
+        else
+            source_dir="$(pwd)"
+        fi
+        
+        # Make sure source dir exists
+        if [ ! -d "$source_dir" ] || [ ! -f "$source_dir/pyproject.toml" ]; then
+            print_error "Local source directory does not contain pyproject.toml: $source_dir"
+            exit 1
+        fi
+    fi
+    
+    cd "$INSTALL_DIR"
+    
+    if [ "$USE_LOCAL" = true ]; then
+        # Make sure we're not copying the install dir into itself
+        local install_dir_abs
+        install_dir_abs="$(pwd)"
+        if [ "$source_dir" = "$install_dir_abs" ]; then
+            print_error "Source directory cannot be the same as install directory"
+            exit 1
+        fi
+        
+        cp -R "$source_dir"/* .
+        print_success "Copied local package"
+        return
+    fi
+    
     print_info "Downloading package from GitHub..."
     
     # Try downloading the package
-    cd "$INSTALL_DIR"
-    
     if command -v curl &> /dev/null; then
         curl -fsSL "https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz" -o universal-ai-config.tar.gz
     elif command -v wget &> /dev/null; then

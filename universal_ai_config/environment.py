@@ -1,5 +1,6 @@
 """
-XDG-compliant environment management for universal AI configuration.
+Environment management for universal AI configuration.
+All agent-related data is consolidated under ~/.agent/
 """
 
 import os
@@ -9,67 +10,49 @@ from typing import Optional
 
 
 class AgentEnv:
-    """Manages XDG-compliant directory structure for AI agent configuration."""
+    """Manages the ~/.agent directory structure for AI agent configuration."""
     
-    def __init__(self, app_name: str = "ai"):
+    def __init__(self, app_name: str = "agent"):
         self.app_name = app_name
         self.home = Path.home()
         self.system = platform.system()
+        
+        # Base directory: ~/.agent (or user override)
+        agent_base = os.getenv("AGENT_CONFIG_HOME")
+        if agent_base:
+            self.base = Path(agent_base)
+        else:
+            self.base = self.home / ".agent"
+    
+    @property
+    def base_dir(self) -> Path:
+        """Base agent directory."""
+        return self.base
     
     @property
     def config(self) -> Path:
         """User configurations, prompts, and credentials."""
-        if self.system == "Windows":
-            # Windows: %APPDATA%\ai\
-            base = os.getenv("APPDATA", str(self.home / "AppData" / "Roaming"))
-            return Path(base) / self.app_name
-        else:
-            # Linux/macOS: $XDG_CONFIG_HOME/ai/ or ~/.config/ai/
-            base = os.getenv("XDG_CONFIG_HOME")
-            path = Path(base) if base else self.home / ".config"
-            return path / self.app_name
+        return self.base / "config"
+    
+    @property
+    def skills(self) -> Path:
+        """Shared skills directory."""
+        return self.base / "skills"
     
     @property
     def data(self) -> Path:
         """Persistent storage like long-term memory vector stores."""
-        if self.system == "Windows":
-            # Windows: %LOCALAPPDATA%\ai\
-            base = os.getenv("LOCALAPPDATA", str(self.home / "AppData" / "Local"))
-            return Path(base) / self.app_name
-        else:
-            # Linux/macOS: $XDG_DATA_HOME/ai/ or ~/.local/share/ai/
-            base = os.getenv("XDG_DATA_HOME")
-            path = Path(base) if base else self.home / ".local" / "share"
-            return path / self.app_name
+        return self.base / "data"
     
     @property
     def state(self) -> Path:
         """Dynamic runtime data like chat history and logs."""
-        if self.system == "Windows":
-            # Windows: %LOCALAPPDATA%\ai\state\
-            base = os.getenv("LOCALAPPDATA", str(self.home / "AppData" / "Local"))
-            return Path(base) / self.app_name / "state"
-        else:
-            # Linux/macOS: $XDG_STATE_HOME/ai/ or ~/.local/state/ai/
-            base = os.getenv("XDG_STATE_HOME")
-            path = Path(base) if base else self.home / ".local" / "state"
-            return path / self.app_name
+        return self.base / "state"
     
     @property
     def cache(self) -> Path:
         """Non-essential data like model caches and temporary embeddings."""
-        if self.system == "Windows":
-            # Windows: %TEMP%\ai\ or %LOCALAPPDATA%\ai\cache\
-            temp = os.getenv("TEMP")
-            if temp:
-                return Path(temp) / self.app_name
-            base = os.getenv("LOCALAPPDATA", str(self.home / "AppData" / "Local"))
-            return Path(base) / self.app_name / "cache"
-        else:
-            # Linux/macOS: $XDG_CACHE_HOME/ai/ or ~/.cache/ai/
-            base = os.getenv("XDG_CACHE_HOME")
-            path = Path(base) if base else self.home / ".cache"
-            return path / self.app_name
+        return self.base / "cache"
     
     @property
     def project_config(self, cwd: Optional[Path] = None) -> Optional[Path]:
@@ -88,7 +71,7 @@ class AgentEnv:
     
     def initialize_dirs(self) -> list[Path]:
         """Creates the directory structure safely."""
-        dirs = [self.config, self.data, self.state, self.cache]
+        dirs = [self.base, self.config, self.skills, self.data, self.state, self.cache]
         created = []
         
         for d in dirs:
@@ -96,7 +79,6 @@ class AgentEnv:
             created.append(d)
         
         # Create subdirectories
-        (self.config / "skills").mkdir(exist_ok=True)
         (self.data / "memory").mkdir(exist_ok=True)
         (self.data / "plugins").mkdir(exist_ok=True)
         (self.state / "logs").mkdir(exist_ok=True)

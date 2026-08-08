@@ -80,20 +80,20 @@ See `PROVIDER_INTEGRATION.md` for detailed integration guide.
 After installation:
 
 ```
-~/.config/ai/              # User configuration
+~/.agent/config/              # User configuration
   ├── config.json         # Unified config
   ├── skills/             # Shared skills
   └── AGENTS.md           # Shared rules
 
-~/.local/share/ai/         # Persistent data
+~/.agent/data/         # Persistent data
   ├── memory/             # Vector DBs
   └── plugins/            # Plugins
 
-~/.local/state/ai/         # Runtime state
+~/.agent/state/         # Runtime state
   ├── logs/               # Logs
   └── history/            # Chat history
 
-~/.cache/ai/               # Cache
+~/.agent/cache/               # Cache
   └── models/             # Model caches
 
 .ai/                        # Project config (in repos)

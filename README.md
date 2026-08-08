@@ -74,25 +74,21 @@ ai-config migrate --project
 ### User-Global Configuration
 
 ```
-~/.config/ai/              # $XDG_CONFIG_HOME/ai/
-  ├── config.json         # Unified config (all providers read this)
+~/.agent/                  # All agent data in one place
+  ├── config/
+  │   ├── config.json     # Unified config (all providers read this)
+  │   └── AGENTS.md       # Shared rules
   ├── skills/             # Shared skills
   │   └── example-skill/
-  └── AGENTS.md           # Shared rules
-
-~/.local/share/ai/         # $XDG_DATA_HOME/ai/
-  ├── memory/             # Long-term memory vector DBs
-  ├── datasets/           # Fine-tuning datasets
-  └── plugins/            # Tool plugins
-
-~/.local/state/ai/         # $XDG_STATE_HOME/ai/
-  ├── logs/               # Execution logs
-  ├── history/            # Chat history databases
-  └── sessions/           # Active execution state
-
-~/.cache/ai/               # $XDG_CACHE_HOME/ai/
-  ├── models/             # Embedding model caches
-  └── venv/               # Isolated tool environments
+  ├── data/               # Long-term memory, datasets, plugins
+  │   ├── memory/
+  │   └── plugins/
+  ├── state/              # Logs, history, active sessions
+  │   ├── logs/
+  │   └── history/
+  └── cache/              # Model caches, isolated environments
+      ├── models/
+      └── venv/
 ```
 
 ### Project-Local Configuration
@@ -109,7 +105,7 @@ ai-config migrate --project
 
 ## Configuration Format
 
-### Unified Config (`~/.config/ai/config.json`)
+### Unified Config (`~/.agent/config/config.json`)
 
 ```json
 {
@@ -135,7 +131,7 @@ ai-config migrate --project
   },
   "skills": {
     "enabled": [],
-    "paths": ["~/.config/ai/skills/", ".ai/skills/"]
+    "paths": ["~/.agent/skills/", ".ai/skills/"]
   }
 }
 ```

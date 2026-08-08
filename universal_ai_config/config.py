@@ -112,7 +112,7 @@ class UnifiedConfig:
             "skills": {
                 "enabled": [],
                 "paths": [
-                    str(self.env.config / "skills"),
+                    str(self.env.skills),
                     ".ai/skills"
                 ]
             },

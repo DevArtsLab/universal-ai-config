@@ -86,10 +86,10 @@ Note: This will not remove your configuration files. To remove those:
 
 ```bash
 # Remove global config
-rm -rf ~/.config/ai/
-rm -rf ~/.local/share/ai/
-rm -rf ~/.local/state/ai/
-rm -rf ~/.cache/ai/
+rm -rf ~/.agent/config/
+rm -rf ~/.agent/data/
+rm -rf ~/.agent/state/
+rm -rf ~/.agent/cache/
 
 # Remove project configs (per project)
 rm -rf .ai/
@@ -101,19 +101,19 @@ rm -rf .ai/
 
 Uses XDG Base Directory Specification by default:
 
-- Config: `~/.config/ai/`
-- Data: `~/.local/share/ai/`
-- State: `~/.local/state/ai/`
-- Cache: `~/.cache/ai/`
+- Config: `~/.agent/config/`
+- Data: `~/.agent/data/`
+- State: `~/.agent/state/`
+- Cache: `~/.agent/cache/`
 
 ### macOS
 
 Same as Linux (XDG-compliant):
 
-- Config: `~/.config/ai/`
-- Data: `~/.local/share/ai/`
-- State: `~/.local/state/ai/`
-- Cache: `~/.cache/ai/`
+- Config: `~/.agent/config/`
+- Data: `~/.agent/data/`
+- State: `~/.agent/state/`
+- Cache: `~/.agent/cache/`
 
 ### Windows
 

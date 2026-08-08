@@ -88,7 +88,7 @@ confirm() {
 
 confirm_uninstall() {
     print_warning "This will remove Universal AI Configuration from your system"
-    print_warning "Configuration files in ~/.config/ai/ will be preserved"
+    print_warning "Configuration files in ~/.agent/ will be preserved"
     echo ""
     
     if confirm "Are you sure you want to continue?" "N"; then
@@ -120,15 +120,12 @@ remove_installation() {
 }
 
 ask_remove_config() {
-    if [ -d "${HOME}/.config/ai" ]; then
-        print_warning "Configuration files found at ~/.config/ai/"
+    if [ -d "${HOME}/.agent" ]; then
+        print_warning "Configuration files found at ~/.agent/"
         
         if [ "$REMOVE_CONFIG" = true ] || confirm "Do you want to remove configuration files as well?" "N"; then
             print_info "Removing configuration files..."
-            rm -rf "${HOME}/.config/ai"
-            rm -rf "${HOME}/.local/share/ai"
-            rm -rf "${HOME}/.local/state/ai"
-            rm -rf "${HOME}/.cache/ai"
+            rm -rf "${HOME}/.agent"
             print_success "Removed configuration files"
         else
             print_info "Configuration files preserved"

@@ -1,5 +1,6 @@
 """
 Migration logic for existing AI provider configurations.
+Discovers and migrates configs, MCP servers, skills, and rules from provider-specific paths.
 """
 
 import json
@@ -18,31 +19,55 @@ class MigrationError(Exception):
 class ProviderMigrator:
     """Handles migration from provider-specific configs to unified config."""
     
-    # Legacy config paths for each provider
-    LEGACY_PATHS = {
+    # Known provider config locations to scan
+    PROVIDER_PATHS = {
         "devin": {
-            "user": "~/.config/devin/config.json",
-            "user_mcp": "~/.config/devin/mcp_config.json",
-            "project": ".devin/config.json",
-            "project_mcp": ".devin/mcp_config.json",
-            "project_local": ".devin/config.local.json",
-            "project_local_mcp": ".devin/mcp_config.local.json",
-            "skills": "~/.config/devin/skills/",
-            "project_skills": ".devin/skills/",
-            "rules": "~/.config/devin/AGENTS.md",
-            "project_rules": "AGENTS.md"
+            "user_config": ["~/.config/devin/config.json"],
+            "user_mcp": ["~/.config/devin/mcp_config.json"],
+            "user_skills": ["~/.config/devin/skills/", "~/.devin/skills/"],
+            "user_rules": ["~/.config/devin/AGENTS.md", "~/.devin/AGENTS.md"],
+            "project_config": [".devin/config.json"],
+            "project_mcp": [".devin/mcp_config.json"],
+            "project_local": [".devin/config.local.json"],
+            "project_local_mcp": [".devin/mcp_config.local.json"],
+            "project_skills": [".devin/skills/"],
+            "project_rules": ["AGENTS.md", ".devin/AGENTS.md"],
         },
         "codium": {
-            "user": "~/.codium/config.json",
-            "project": ".codium/config.json"
+            "user_config": ["~/.codium/config.json", "~/.config/VSCodium/User/settings.json"],
+            "user_mcp": ["~/.codium/mcp_config.json"],
+            "user_skills": ["~/.codium/skills/", "~/.config/VSCodium/User/skills/"],
+            "user_rules": ["~/.codium/AGENTS.md"],
+            "project_config": [".codium/config.json", ".vscode/settings.json"],
+            "project_mcp": [".codium/mcp_config.json"],
+            "project_local": [".codium/config.local.json"],
+            "project_local_mcp": [".codium/mcp_config.local.json"],
+            "project_skills": [".codium/skills/", ".vscode/skills/"],
+            "project_rules": [".codium/AGENTS.md"],
         },
         "windsurf": {
-            "user": "~/.windsurf/config.json",
-            "project": ".windsurf/config.json"
+            "user_config": ["~/.windsurf/config.json", "~/.windsurf/argv.json"],
+            "user_mcp": ["~/.windsurf/mcp_config.json"],
+            "user_skills": ["~/.windsurf/skills/"],
+            "user_rules": ["~/.windsurf/AGENTS.md"],
+            "project_config": [".windsurf/config.json"],
+            "project_mcp": [".windsurf/mcp_config.json"],
+            "project_local": [".windsurf/config.local.json"],
+            "project_local_mcp": [".windsurf/mcp_config.local.json"],
+            "project_skills": [".windsurf/skills/"],
+            "project_rules": [".windsurf/AGENTS.md"],
         },
         "claude": {
-            "user": "~/.config/claude/config.json",
-            "project": ".claude/config.json"
+            "user_config": ["~/.claude/settings.json", "~/.claude.json"],
+            "user_mcp": ["~/.claude/mcp_config.json"],
+            "user_skills": ["~/.claude/skills/"],
+            "user_rules": ["~/.claude/AGENTS.md"],
+            "project_config": [".claude/config.json"],
+            "project_mcp": [".claude/mcp_config.json"],
+            "project_local": [".claude/config.local.json"],
+            "project_local_mcp": [".claude/mcp_config.local.json"],
+            "project_skills": [".claude/skills/"],
+            "project_rules": [".claude/AGENTS.md"],
         }
     }
     
@@ -50,56 +75,92 @@ class ProviderMigrator:
         self.env = env or AgentEnv()
         self.config = UnifiedConfig(env)
     
-    def get_legacy_path(self, provider: str, key: str = "user") -> Optional[Path]:
+    def _find_first_existing(self, paths: List[str]) -> Optional[Path]:
+        """Find the first existing path from a list of candidates."""
+        for path_str in paths:
+            path = Path(path_str).expanduser()
+            if path.exists():
+                return path
+        return None
+    
+    def get_legacy_path(self, provider: str, key: str = "user_config") -> Optional[Path]:
         """Get legacy path for a provider."""
-        if provider not in self.LEGACY_PATHS:
+        if provider not in self.PROVIDER_PATHS:
             return None
         
-        path_str = self.LEGACY_PATHS[provider].get(key)
-        if not path_str:
-            return None
-        
-        path = Path(path_str).expanduser()
-        return path if path.exists() else None
+        paths = self.PROVIDER_PATHS[provider].get(key, [])
+        return self._find_first_existing(paths)
     
     def detect_providers(self) -> List[str]:
         """Detect which providers have legacy configs."""
         detected = []
         
-        for provider in self.LEGACY_PATHS.keys():
-            if self.get_legacy_path(provider, "user"):
+        for provider in self.PROVIDER_PATHS.keys():
+            if self.get_legacy_path(provider, "user_config"):
+                detected.append(provider)
+            elif self.get_legacy_path(provider, "user_mcp"):
+                detected.append(provider)
+            elif self.get_legacy_path(provider, "user_skills"):
                 detected.append(provider)
         
-        return detected
+        return list(set(detected))
+    
+    def _load_json_safe(self, path: Optional[Path]) -> Optional[Dict[str, Any]]:
+        """Load JSON file safely, returning None on error."""
+        if not path or not path.exists():
+            return None
+        try:
+            with open(path, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            return None
     
     def migrate_provider(self, provider: str) -> Dict[str, Any]:
         """Migrate a single provider to unified config."""
-        if provider not in self.LEGACY_PATHS:
+        if provider not in self.PROVIDER_PATHS:
             raise MigrationError(f"Unknown provider: {provider}")
         
-        legacy_path = self.get_legacy_path(provider, "user")
+        legacy_path = self.get_legacy_path(provider, "user_config")
+        if not legacy_path:
+            # Provider may have only MCP or skills
+            legacy_path = self.get_legacy_path(provider, "user_mcp") or \
+                         self.get_legacy_path(provider, "user_skills")
+        
         if not legacy_path:
             raise MigrationError(f"No legacy config found for {provider}")
         
         print(f"Migrating {provider} from {legacy_path}")
         
         # Load legacy config
-        try:
-            legacy_config = load_json(legacy_path)
-        except ConfigError as e:
-            raise MigrationError(f"Failed to load {provider} config: {e}")
+        legacy_config = self._load_json_safe(self.get_legacy_path(provider, "user_config")) or {}
         
         # Transform to unified format
         provider_settings = self._transform_config(provider, legacy_config)
         
         # Update unified config
-        self.config.update_provider(provider, provider_settings)
+        if provider_settings:
+            self.config.update_provider(provider, provider_settings)
         
-        # Migrate MCP servers if present
+        # Migrate MCP servers from main config
         if "mcpServers" in legacy_config:
             for name, mcp_config in legacy_config["mcpServers"].items():
                 self.config.add_mcp_server(name, mcp_config)
                 print(f"  Migrated MCP server: {name}")
+        
+        # Migrate MCP servers from separate mcp_config.json
+        mcp_path = self.get_legacy_path(provider, "user_mcp")
+        if mcp_path and mcp_path.exists():
+            mcp_config = self._load_json_safe(mcp_path)
+            if mcp_config and "mcpServers" in mcp_config:
+                for name, server_config in mcp_config["mcpServers"].items():
+                    self.config.add_mcp_server(name, server_config)
+                    print(f"  Migrated MCP server from {mcp_path}: {name}")
+            elif mcp_config:
+                # Some configs may have MCP servers at root level
+                for name, server_config in mcp_config.items():
+                    if isinstance(server_config, dict) and ("command" in server_config or "url" in server_config):
+                        self.config.add_mcp_server(name, server_config)
+                        print(f"  Migrated MCP server from {mcp_path}: {name}")
         
         # Migrate skills directory
         self._migrate_skills(provider)
@@ -107,10 +168,13 @@ class ProviderMigrator:
         # Migrate rules file
         self._migrate_rules(provider)
         
-        # Backup legacy config
-        backup_path = legacy_path.with_suffix('.json.backup')
-        shutil.copy2(legacy_path, backup_path)
-        print(f"  Backed up legacy config to: {backup_path}")
+        # Backup legacy config (only if it's a config file, not a directory)
+        config_path = self.get_legacy_path(provider, "user_config")
+        if config_path and config_path.is_file():
+            backup_path = config_path.with_suffix('.json.backup')
+            if not backup_path.exists():
+                shutil.copy2(config_path, backup_path)
+                print(f"  Backed up legacy config to: {backup_path}")
         
         return provider_settings
     
@@ -130,39 +194,67 @@ class ProviderMigrator:
         
         # Provider-specific transformations
         if provider == "devin":
-            # Devin-specific fields
             if "show_history_on_continue" in legacy_config.get("agent", {}):
                 settings["show_history_on_continue"] = legacy_config["agent"]["show_history_on_continue"]
+        
+        elif provider == "claude":
+            # Claude settings.json may have different structure
+            if "model" in legacy_config:
+                settings["model"] = legacy_config["model"]
         
         return settings
     
     def _migrate_skills(self, provider: str) -> None:
         """Migrate skills directory for a provider."""
-        legacy_skills = self.get_legacy_path(provider, "skills")
+        legacy_skills = self.get_legacy_path(provider, "user_skills")
         if not legacy_skills or not legacy_skills.exists():
             return
         
-        unified_skills = self.env.config / "skills"
+        unified_skills = self.env.skills
+        unified_skills.mkdir(parents=True, exist_ok=True)
         
         # Copy skills to unified location
-        for skill_file in legacy_skills.glob("*/SKILL.md"):
+        migrated = 0
+        for skill_file in legacy_skills.rglob("SKILL.md"):
             skill_name = skill_file.parent.name
             target_dir = unified_skills / skill_name
             target_dir.mkdir(parents=True, exist_ok=True)
             shutil.copy2(skill_file, target_dir / "SKILL.md")
             print(f"  Migrated skill: {skill_name}")
+            migrated += 1
+        
+        # Also migrate loose .md files as skills
+        for skill_file in legacy_skills.glob("*.md"):
+            if skill_file.name == "SKILL.md":
+                continue
+            skill_name = skill_file.stem
+            target_dir = unified_skills / skill_name
+            target_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(skill_file, target_dir / "SKILL.md")
+            print(f"  Migrated skill: {skill_name}")
+            migrated += 1
+        
+        if migrated == 0:
+            print(f"  No skills found in {legacy_skills}")
     
     def _migrate_rules(self, provider: str) -> None:
         """Migrate rules file for a provider."""
-        legacy_rules = self.get_legacy_path(provider, "rules")
+        legacy_rules = self.get_legacy_path(provider, "user_rules")
         if not legacy_rules or not legacy_rules.exists():
             return
         
         unified_rules = self.env.config / "AGENTS.md"
+        unified_rules.parent.mkdir(parents=True, exist_ok=True)
         
         if not unified_rules.exists():
             shutil.copy2(legacy_rules, unified_rules)
             print(f"  Migrated rules to: {unified_rules}")
+        else:
+            # Append to existing rules
+            existing = unified_rules.read_text()
+            additional = legacy_rules.read_text()
+            unified_rules.write_text(f"{existing}\n\n<!-- Migrated from {provider} -->\n{additional}")
+            print(f"  Appended rules from: {legacy_rules}")
     
     def migrate_all(self) -> Dict[str, Any]:
         """Migrate all detected providers."""
@@ -189,22 +281,46 @@ class ProviderMigrator:
         ai_dir = project_root / ".ai"
         ai_dir.mkdir(exist_ok=True)
         
-        for provider in self.LEGACY_PATHS.keys():
+        for provider in self.PROVIDER_PATHS.keys():
             # Migrate project config
-            project_config = self.get_legacy_path(provider, "project")
+            project_config = self.get_legacy_path(provider, "project_config")
             if project_config and project_config.exists():
                 try:
-                    legacy_config = load_json(project_config)
-                    project_unified = ai_dir / "config.json"
-                    
-                    if project_unified.exists():
-                        existing = load_json(project_unified)
-                        merged = deep_merge(existing, legacy_config)
-                    else:
-                        merged = legacy_config
-                    
-                    save_json(project_unified, merged)
-                    print(f"Migrated {provider} project config to {project_unified}")
+                    legacy_config = self._load_json_safe(project_config)
+                    if legacy_config:
+                        project_unified = ai_dir / "config.json"
+                        
+                        if project_unified.exists():
+                            existing = load_json(project_unified)
+                            merged = deep_merge(existing, legacy_config)
+                        else:
+                            merged = legacy_config
+                        
+                        save_json(project_unified, merged)
+                        print(f"Migrated {provider} project config to {project_unified}")
+                except ConfigError:
+                    pass
+            
+            # Migrate project MCP config
+            project_mcp = self.get_legacy_path(provider, "project_mcp")
+            if project_mcp and project_mcp.exists():
+                try:
+                    legacy_config = self._load_json_safe(project_mcp)
+                    if legacy_config and "mcpServers" in legacy_config:
+                        project_mcp_unified = ai_dir / "mcp_config.json"
+                        
+                        if project_mcp_unified.exists():
+                            existing = load_json(project_mcp_unified)
+                            merged_mcp = existing
+                            merged_mcp["mcpServers"] = deep_merge(
+                                existing.get("mcpServers", {}),
+                                legacy_config["mcpServers"]
+                            )
+                        else:
+                            merged_mcp = legacy_config
+                        
+                        save_json(project_mcp_unified, merged_mcp)
+                        print(f"Migrated {provider} project MCP config to {project_mcp_unified}")
                 except ConfigError:
                     pass
             
@@ -212,17 +328,18 @@ class ProviderMigrator:
             project_local = self.get_legacy_path(provider, "project_local")
             if project_local and project_local.exists():
                 try:
-                    legacy_config = load_json(project_local)
-                    project_local_unified = ai_dir / "config.local.json"
-                    
-                    if project_local_unified.exists():
-                        existing = load_json(project_local_unified)
-                        merged = deep_merge(existing, legacy_config)
-                    else:
-                        merged = legacy_config
-                    
-                    save_json(project_local_unified, merged)
-                    print(f"Migrated {provider} project local config to {project_local_unified}")
+                    legacy_config = self._load_json_safe(project_local)
+                    if legacy_config:
+                        project_local_unified = ai_dir / "config.local.json"
+                        
+                        if project_local_unified.exists():
+                            existing = load_json(project_local_unified)
+                            merged = deep_merge(existing, legacy_config)
+                        else:
+                            merged = legacy_config
+                        
+                        save_json(project_local_unified, merged)
+                        print(f"Migrated {provider} project local config to {project_local_unified}")
                 except ConfigError:
                     pass
             
@@ -232,16 +349,17 @@ class ProviderMigrator:
                 unified_skills = ai_dir / "skills"
                 unified_skills.mkdir(exist_ok=True)
                 
-                for skill_file in project_skills.glob("*/SKILL.md"):
+                for skill_file in project_skills.rglob("SKILL.md"):
                     skill_name = skill_file.parent.name
                     target_dir = unified_skills / skill_name
                     target_dir.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(skill_file, target_dir / "SKILL.md")
                     print(f"Migrated {provider} project skill: {skill_name}")
-        
-        # Migrate project rules
-        for provider in self.LEGACY_PATHS.keys():
-            project_rules = self.get_legacy_path(provider, "project_rules")
+            
+            # Migrate project rules
+            project_rules = self._find_first_existing(
+                [str(project_root / p) for p in self.PROVIDER_PATHS[provider].get("project_rules", [])]
+            )
             if project_rules and project_rules.exists():
                 unified_rules = ai_dir / "AGENTS.md"
                 if not unified_rules.exists():
