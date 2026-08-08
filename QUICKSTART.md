@@ -9,6 +9,7 @@ curl -fsSL https://raw.githubusercontent.com/DevArtsLab/universal-ai-config/main
 ```
 
 This will:
+
 - Download and install the package
 - Set up the `ai-config` command
 - Initialize the unified config structure
@@ -21,6 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/DevArtsLab/universal-ai-config/main
 ```
 
 The installer will:
+
 - Detect existing Devin, Cursor, Windsurf, Claude configs
 - Ask if you want to migrate them
 - Migrate to the unified structure
@@ -49,7 +51,7 @@ ai-config init-project
 ai-config get-config devin
 
 # Set provider config
-ai-config set-config devin model swe-1-6-fast
+ai-config set-config devin model your-model-name
 ```
 
 ## For Developers
@@ -111,11 +113,13 @@ curl -fsSL https://raw.githubusercontent.com/DevArtsLab/universal-ai-config/main
 ### Command not found
 
 Add to your PATH:
+
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Add to `~/.zshrc` or `~/.bashrc`:
+
 ```bash
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc

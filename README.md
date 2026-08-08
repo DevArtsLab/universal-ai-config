@@ -77,7 +77,7 @@ ai-config migrate --project
 ~/.config/ai/              # $XDG_CONFIG_HOME/ai/
   ├── config.json         # Unified config (all providers read this)
   ├── skills/             # Shared skills
-  │   └── todoist-cli/
+  │   └── example-skill/
   └── AGENTS.md           # Shared rules
 
 ~/.local/share/ai/         # $XDG_DATA_HOME/ai/
@@ -114,23 +114,17 @@ ai-config migrate --project
 ```json
 {
   "shared": {
-    "model": "swe-1-6-fast",
     "permissions": {
       "allow": ["Read(**)", "Exec(git)"],
       "deny": ["Exec(sudo)"],
       "ask": ["Write(**/.env*)"]
-    },
-    "theme_mode": "dark"
+    }
   },
   "providers": {
     "devin": {
-      "model": "swe-1-6-fast",
       "permissions": {
         "allow": ["Read(**)", "Exec(git)", "Exec(npm)"]
       }
-    },
-    "cursor": {
-      "model": "gpt-4"
     }
   },
   "mcpServers": {
@@ -140,7 +134,7 @@ ai-config migrate --project
     }
   },
   "skills": {
-    "enabled": ["todoist-cli", "devin-cli"],
+    "enabled": [],
     "paths": ["~/.config/ai/skills/", ".ai/skills/"]
   }
 }
@@ -204,7 +198,7 @@ ai-config get-config devin
 Set configuration value for a provider.
 
 ```bash
-ai-config set-config devin model swe-1-6-fast
+ai-config set-config devin model your-model-name
 ai-config set-config devin theme_mode dark
 ```
 
