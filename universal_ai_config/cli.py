@@ -52,11 +52,14 @@ class CLI:
         print("\n✓ Initialization complete")
         print(f"Config directory: {self.env.config}")
     
-    def migrate(self, provider: Optional[str] = None, project: bool = False) -> None:
+    def migrate(self, provider: Optional[str] = None, project: bool = False, all_projects: bool = False) -> None:
         """Migrate existing provider configurations."""
         print("Starting migration...")
         
-        if project:
+        if all_projects:
+            # Scan all projects and migrate their skills to global
+            self.migrator.migrate_all_project_skills()
+        elif project:
             # Migrate project configs
             project_root = find_project_root()
             if not project_root:
@@ -328,6 +331,7 @@ def main():
     migrate_parser = subparsers.add_parser("migrate", help="Migrate existing configurations")
     migrate_parser.add_argument("provider", nargs="?", help="Specific provider to migrate")
     migrate_parser.add_argument("--project", action="store_true", help="Migrate project configs")
+    migrate_parser.add_argument("--all-projects", action="store_true", help="Scan all projects and migrate their skills to global ~/.agents/skills")
     
     # validate command
     subparsers.add_parser("validate", help="Validate configuration setup")
@@ -359,7 +363,7 @@ def main():
     if args.command == "init":
         cli.init(fresh=args.fresh)
     elif args.command == "migrate":
-        cli.migrate(provider=args.provider, project=args.project)
+        cli.migrate(provider=args.provider, project=args.project, all_projects=args.all_projects)
     elif args.command == "validate":
         cli.validate()
     elif args.command == "status":

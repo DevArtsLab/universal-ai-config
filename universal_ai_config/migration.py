@@ -365,3 +365,85 @@ class ProviderMigrator:
                 if not unified_rules.exists():
                     shutil.copy2(project_rules, unified_rules)
                     print(f"Migrated {provider} project rules to {unified_rules}")
+    
+    def _copy_skills_to_global(self, skills_dir: Path, source_label: str = "") -> int:
+        """Copy all skills from a directory to the global ~/.agents/skills location."""
+        if not skills_dir or not skills_dir.exists():
+            return 0
+        
+        unified_skills = self.env.skills
+        unified_skills.mkdir(parents=True, exist_ok=True)
+        
+        migrated = 0
+        prefix = f"{source_label}: " if source_label else ""
+        
+        # Copy structured skills (SKILL.md in subdirectories)
+        for skill_file in skills_dir.rglob("SKILL.md"):
+            skill_name = skill_file.parent.name
+            target_dir = unified_skills / skill_name
+            target_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(skill_file, target_dir / "SKILL.md")
+            print(f"  {prefix}Migrated skill: {skill_name}")
+            migrated += 1
+        
+        # Also migrate loose .md files as skills
+        for skill_file in skills_dir.glob("*.md"):
+            if skill_file.name == "SKILL.md":
+                continue
+            skill_name = skill_file.stem
+            target_dir = unified_skills / skill_name
+            target_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(skill_file, target_dir / "SKILL.md")
+            print(f"  {prefix}Migrated skill: {skill_name}")
+            migrated += 1
+        
+        return migrated
+    
+    def find_project_skill_dirs(self, search_paths: Optional[List[Path]] = None, max_depth: int = 3) -> List[Path]:
+        """Find all project skill directories under search paths.
+        
+        Searches up to max_depth levels below each search path to avoid
+        crawling the entire home directory.
+        """
+        if search_paths is None:
+            search_paths = [Path.home() / "projects", Path.home()]
+        
+        skill_patterns = []
+        for provider in self.PROVIDER_PATHS.values():
+            for pattern in provider.get("project_skills", []):
+                skill_patterns.append(Path(pattern))
+        
+        skill_dirs = []
+        for base in search_paths:
+            if not base.exists():
+                continue
+            for pattern in skill_patterns:
+                # Build depth-limited glob patterns
+                for depth in range(1, max_depth + 1):
+                    glob_pattern = "/".join(["*"] * depth) + "/" + str(pattern)
+                    for path in base.glob(glob_pattern):
+                        if path.is_dir():
+                            skill_dirs.append(path)
+        
+        return sorted(set(skill_dirs))
+    
+    def migrate_all_project_skills(self, search_paths: Optional[List[Path]] = None) -> int:
+        """Scan all projects and migrate their skills to global ~/.agents/skills."""
+        skill_dirs = self.find_project_skill_dirs(search_paths)
+        
+        if not skill_dirs:
+            print("No project skill directories found")
+            return 0
+        
+        print(f"Found {len(skill_dirs)} project skill director{'y' if len(skill_dirs) == 1 else 'ies'}:")
+        for skill_dir in skill_dirs:
+            print(f"  - {skill_dir}")
+        
+        total = 0
+        for skill_dir in skill_dirs:
+            label = str(skill_dir.relative_to(Path.home()))
+            count = self._copy_skills_to_global(skill_dir, source_label=label)
+            total += count
+        
+        print(f"\nMigrated {total} project skill(s) to {self.env.skills}")
+        return total
