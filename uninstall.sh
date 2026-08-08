@@ -1,9 +1,40 @@
 #!/bin/bash
 
 # Universal AI Configuration Uninstaller
-# Usage: curl -fsSL https://raw.githubusercontent.com/DevArtsLab/universal-ai-config/main/uninstall.sh | bash
+# Usage:
+#   Interactive: curl -fsSL https://raw.githubusercontent.com/DevArtsLab/universal-ai-config/main/uninstall.sh | bash
+#   Non-interactive: curl -fsSL https://raw.githubusercontent.com/DevArtsLab/universal-ai-config/main/uninstall.sh | bash -s -- --yes
 
 set -e
+
+# Parse arguments
+AUTO_YES=false
+REMOVE_CONFIG=false
+for arg in "$@"; do
+    case $arg in
+        --yes|-y)
+            AUTO_YES=true
+            shift
+            ;;
+        --remove-config)
+            REMOVE_CONFIG=true
+            shift
+            ;;
+        *)
+            ;;
+    esac
+done
+
+# Detect non-interactive environment
+if [ -t 0 ]; then
+    IS_INTERACTIVE=true
+else
+    IS_INTERACTIVE=false
+fi
+
+if [ "$CI" = "true" ] || [ "$NONINTERACTIVE" = "1" ]; then
+    AUTO_YES=true
+fi
 
 # Colors
 RED='\033[0;31m'
@@ -31,16 +62,41 @@ print_info() {
     echo "ℹ $1"
 }
 
+confirm() {
+    local prompt="$1"
+    local default="$2"
+    
+    if [ "$AUTO_YES" = true ]; then
+        return 0
+    fi
+    
+    if [ "$IS_INTERACTIVE" = false ]; then
+        if [ "$default" = "Y" ]; then
+            return 0
+        else
+            return 1
+        fi
+    fi
+    
+    read -p "$prompt (y/N) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        return 0
+    fi
+    return 1
+}
+
 confirm_uninstall() {
     print_warning "This will remove Universal AI Configuration from your system"
     print_warning "Configuration files in ~/.config/ai/ will be preserved"
     echo ""
-    read -p "Are you sure you want to continue? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        print_info "Uninstall cancelled"
-        exit 0
+    
+    if confirm "Are you sure you want to continue?" "N"; then
+        return 0
     fi
+    
+    print_info "Uninstall cancelled"
+    exit 0
 }
 
 remove_symlink() {
@@ -66,9 +122,8 @@ remove_installation() {
 ask_remove_config() {
     if [ -d "${HOME}/.config/ai" ]; then
         print_warning "Configuration files found at ~/.config/ai/"
-        read -p "Do you want to remove configuration files as well? (y/N) " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        
+        if [ "$REMOVE_CONFIG" = true ] || confirm "Do you want to remove configuration files as well?" "N"; then
             print_info "Removing configuration files..."
             rm -rf "${HOME}/.config/ai"
             rm -rf "${HOME}/.local/share/ai"

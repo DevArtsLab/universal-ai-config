@@ -1,9 +1,36 @@
 #!/bin/bash
 
 # Universal AI Configuration Installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/DevArtsLab/universal-ai-config/main/install.sh | bash
+# Usage:
+#   Interactive: curl -fsSL https://raw.githubusercontent.com/DevArtsLab/universal-ai-config/main/install.sh | bash
+#   Non-interactive: curl -fsSL https://raw.githubusercontent.com/DevArtsLab/universal-ai-config/main/install.sh | bash -s -- --yes
 
 set -e
+
+# Parse arguments
+AUTO_YES=false
+for arg in "$@"; do
+    case $arg in
+        --yes|-y)
+            AUTO_YES=true
+            shift
+            ;;
+        *)
+            # Unknown option
+            ;;
+    esac
+done
+
+# Detect non-interactive environment (no TTY or CI)
+if [ -t 0 ]; then
+    IS_INTERACTIVE=true
+else
+    IS_INTERACTIVE=false
+fi
+
+if [ "$CI" = "true" ] || [ "$NONINTERACTIVE" = "1" ]; then
+    AUTO_YES=true
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -32,6 +59,31 @@ print_warning() {
 
 print_info() {
     echo "ℹ $1"
+}
+
+confirm() {
+    local prompt="$1"
+    local default="$2"
+    
+    if [ "$AUTO_YES" = true ]; then
+        return 0
+    fi
+    
+    if [ "$IS_INTERACTIVE" = false ]; then
+        # In non-interactive mode without --yes, default to no
+        if [ "$default" = "Y" ]; then
+            return 0
+        else
+            return 1
+        fi
+    fi
+    
+    read -p "$prompt (y/N) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        return 0
+    fi
+    return 1
 }
 
 check_python() {
@@ -64,9 +116,8 @@ check_pip() {
 detect_existing_installation() {
     if [ -d "$INSTALL_DIR" ]; then
         print_warning "Existing installation found at $INSTALL_DIR"
-        read -p "Do you want to remove it and reinstall? (y/N) " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        
+        if confirm "Do you want to remove it and reinstall?" "N"; then
             print_info "Removing existing installation..."
             rm -rf "$INSTALL_DIR"
         else
@@ -203,9 +254,8 @@ prompt_migration() {
     if detect_legacy_configs; then
         echo ""
         print_warning "Legacy configurations detected"
-        read -p "Do you want to migrate them to the new unified config? (y/N) " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        
+        if confirm "Do you want to migrate them to the new unified config?" "N"; then
             return 0
         fi
     fi
