@@ -44,6 +44,11 @@ class CLI:
             agents_md.write_text("# Universal AI Configuration\n\n## Global Rules\n\nAdd your global AI agent rules here.\n")
             print(f"  Created: {agents_md}")
         
+        # Create default mcp-config.json
+        if not self.config.mcp_config_path.exists():
+            self.config.save_mcp_servers({})
+            print(f"  Created: {self.config.mcp_config_path}")
+        
         print("\n✓ Initialization complete")
         print(f"Config directory: {self.env.config}")
     

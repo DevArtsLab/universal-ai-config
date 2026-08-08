@@ -1,5 +1,6 @@
 """
 Unified configuration management for AI providers.
+MCP servers are kept in a separate mcp-config.json file.
 """
 
 import json
@@ -54,19 +55,75 @@ class UnifiedConfig:
         """Path to the unified config file."""
         return self.env.config / "config.json"
     
-    def load_unified(self) -> Dict[str, Any]:
-        """Load the unified configuration."""
+    @property
+    def mcp_config_path(self) -> Path:
+        """Path to the MCP config file."""
+        return self.env.config / "mcp-config.json"
+    
+    def load_unified(self, include_mcp: bool = True) -> Dict[str, Any]:
+        """Load the unified configuration.
+        
+        If include_mcp is True, MCP servers from mcp-config.json are merged
+        into the returned config under the 'mcpServers' key.
+        """
         if self._unified_config is None:
             path = self.unified_config_path
             if not path.exists():
-                return self._get_default_config()
-            self._unified_config = load_json(path)
-        return self._unified_config
+                config = self._get_default_config()
+            else:
+                config = load_json(path)
+            self._unified_config = config
+        else:
+            config = self._unified_config
+        
+        if include_mcp:
+            config = config.copy()
+            config["mcpServers"] = self.load_mcp_servers()
+        
+        return config
+    
+    def load_mcp_servers(self) -> Dict[str, Any]:
+        """Load MCP servers from mcp-config.json."""
+        if not self.mcp_config_path.exists():
+            return {}
+        try:
+            mcp_config = load_json(self.mcp_config_path)
+            return mcp_config.get("mcpServers", {})
+        except ConfigError:
+            return {}
     
     def save_unified(self, config: Dict[str, Any]) -> None:
-        """Save the unified configuration."""
+        """Save the unified configuration.
+        
+        MCP servers are stripped from config.json and saved to mcp-config.json.
+        """
+        config = config.copy()
+        
+        # Extract MCP servers and save separately
+        mcp_servers = config.pop("mcpServers", None)
+        if mcp_servers is not None:
+            self.save_mcp_servers(mcp_servers)
+        
         save_json(self.unified_config_path, config)
         self._unified_config = config
+    
+    def save_mcp_servers(self, mcp_servers: Dict[str, Any]) -> None:
+        """Save MCP servers to mcp-config.json."""
+        mcp_config = {"mcpServers": mcp_servers}
+        save_json(self.mcp_config_path, mcp_config)
+    
+    def add_mcp_server(self, name: str, config: Dict[str, Any]) -> None:
+        """Add or update an MCP server."""
+        mcp_servers = self.load_mcp_servers()
+        mcp_servers[name] = config
+        self.save_mcp_servers(mcp_servers)
+    
+    def remove_mcp_server(self, name: str) -> None:
+        """Remove an MCP server."""
+        mcp_servers = self.load_mcp_servers()
+        if name in mcp_servers:
+            del mcp_servers[name]
+            self.save_mcp_servers(mcp_servers)
     
     def get_provider_config(self, provider: str) -> Dict[str, Any]:
         """Get configuration for a specific provider."""
@@ -90,14 +147,34 @@ class UnifiedConfig:
         env = AgentEnv()
         config_paths = env.get_config_precedence(cwd)
         
-        # Start with unified user config
-        merged = self.load_unified()
+        # Start with unified user config (including MCP)
+        merged = self.load_unified(include_mcp=True)
         
         # Merge project configs (lowest to highest priority)
         for path in reversed(config_paths):
             try:
                 project_config = load_json(path)
                 merged = deep_merge(merged, project_config)
+                
+                # Also merge project MCP config if it exists
+                mcp_path = path.parent / "mcp-config.json"
+                if mcp_path.exists():
+                    project_mcp = load_json(mcp_path)
+                    if "mcpServers" in project_mcp:
+                        merged.setdefault("mcpServers", {})
+                        merged["mcpServers"] = deep_merge(
+                            merged["mcpServers"], project_mcp["mcpServers"]
+                        )
+                
+                # Merge project local MCP config if it exists
+                local_mcp_path = path.parent / "mcp-config.local.json"
+                if local_mcp_path.exists():
+                    local_mcp = load_json(local_mcp_path)
+                    if "mcpServers" in local_mcp:
+                        merged.setdefault("mcpServers", {})
+                        merged["mcpServers"] = deep_merge(
+                            merged["mcpServers"], local_mcp["mcpServers"]
+                        )
             except ConfigError:
                 continue
         
@@ -108,7 +185,6 @@ class UnifiedConfig:
         return {
             "shared": {},
             "providers": {},
-            "mcpServers": {},
             "skills": {
                 "enabled": [],
                 "paths": [
@@ -125,7 +201,7 @@ class UnifiedConfig:
     
     def update_provider(self, provider: str, settings: Dict[str, Any]) -> None:
         """Update settings for a specific provider."""
-        unified = self.load_unified()
+        unified = self.load_unified(include_mcp=False)
         
         if "providers" not in unified:
             unified["providers"] = {}
@@ -139,23 +215,6 @@ class UnifiedConfig:
     
     def update_shared(self, settings: Dict[str, Any]) -> None:
         """Update shared settings."""
-        unified = self.load_unified()
+        unified = self.load_unified(include_mcp=False)
         unified["shared"] = deep_merge(unified.get("shared", {}), settings)
         self.save_unified(unified)
-    
-    def add_mcp_server(self, name: str, config: Dict[str, Any]) -> None:
-        """Add or update an MCP server."""
-        unified = self.load_unified()
-        
-        if "mcpServers" not in unified:
-            unified["mcpServers"] = {}
-        
-        unified["mcpServers"][name] = config
-        self.save_unified(unified)
-    
-    def remove_mcp_server(self, name: str) -> None:
-        """Remove an MCP server."""
-        unified = self.load_unified()
-        if "mcpServers" in unified and name in unified["mcpServers"]:
-            del unified["mcpServers"][name]
-            self.save_unified(unified)

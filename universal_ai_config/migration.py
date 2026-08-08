@@ -307,7 +307,7 @@ class ProviderMigrator:
                 try:
                     legacy_config = self._load_json_safe(project_mcp)
                     if legacy_config and "mcpServers" in legacy_config:
-                        project_mcp_unified = ai_dir / "mcp_config.json"
+                        project_mcp_unified = ai_dir / "mcp-config.json"
                         
                         if project_mcp_unified.exists():
                             existing = load_json(project_mcp_unified)

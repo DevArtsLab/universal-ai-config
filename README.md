@@ -77,6 +77,7 @@ ai-config migrate --project
 ~/.agents/                  # All agent data in one place
   ├── config/
   │   ├── config.json     # Unified config (all providers read this)
+  │   ├── mcp-config.json # MCP servers
   │   └── AGENTS.md       # Shared rules
   ├── skills/             # Shared skills
   │   └── example-skill/
@@ -98,8 +99,8 @@ ai-config migrate --project
   ├── config.json         # Shared team settings
   ├── config.local.json   # Personal overrides (gitignored)
   ├── skills/             # Project-specific skills
-  ├── mcp_config.json     # Project MCP servers
-  ├── mcp_config.local.json # Project MCP overrides (gitignored)
+  ├── mcp-config.json     # Project MCP servers
+  ├── mcp-config.local.json # Project MCP overrides (gitignored)
   └── AGENTS.md           # Project rules
 ```
 
@@ -123,15 +124,24 @@ ai-config migrate --project
       }
     }
   },
+  "skills": {
+    "enabled": [],
+    "paths": ["~/.agents/skills/", ".ai/skills/"]
+  }
+}
+```
+
+### MCP Config (`~/.agents/config/mcp-config.json`)
+
+MCP servers are kept in a separate file:
+
+```json
+{
   "mcpServers": {
     "github": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"]
     }
-  },
-  "skills": {
-    "enabled": [],
-    "paths": ["~/.agents/skills/", ".ai/skills/"]
   }
 }
 ```

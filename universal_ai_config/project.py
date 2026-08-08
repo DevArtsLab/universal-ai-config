@@ -124,7 +124,7 @@ class ProjectConfig:
         mcp_config = {}
         
         # Load base MCP config
-        mcp_path = self.ai_dir / "mcp_config.json"
+        mcp_path = self.ai_dir / "mcp-config.json"
         if mcp_path.exists():
             try:
                 mcp_config = load_json(mcp_path)
@@ -147,7 +147,7 @@ class ProjectConfig:
         if not self.is_in_project():
             raise ConfigError("Not in a project directory")
         
-        config_path = self.ai_dir / ("mcp_config.local.json" if local else "mcp_config.json")
+        config_path = self.ai_dir / ("mcp-config.local.json" if local else "mcp-config.json")
         save_json(config_path, config)
     
     def add_mcp_server(self, name: str, server_config: Dict[str, Any], local: bool = False) -> None:

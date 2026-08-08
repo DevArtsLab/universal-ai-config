@@ -121,7 +121,7 @@ The unified config file (`~/.agents/config/config.json`) has this structure:
     }
   },
   "mcpServers": {
-    // Shared MCP servers
+    // Shared MCP servers (stored in ~/.agents/config/mcp-config.json)
     "github": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"]
