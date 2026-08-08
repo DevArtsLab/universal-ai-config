@@ -23,7 +23,7 @@ curl -fsSL https://raw.githubusercontent.com/DevArtsLab/universal-ai-config/main
 
 The installer will:
 
-- Detect existing Devin, Codium, Windsurf, Claude configs
+- Detect existing Devin, Codeium, Windsurf, Claude configs
 - Ask if you want to migrate them
 - Migrate to the unified structure
 - Backup original configs

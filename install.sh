@@ -270,8 +270,8 @@ detect_legacy_configs() {
         LEGACY_FOUND=1
     fi
     
-    if [ -d "${HOME}/.codium" ]; then
-        print_warning "Found Codium config at ~/.codium"
+    if [ -d "${HOME}/.codeium" ]; then
+        print_warning "Found Codeium config at ~/.codeium"
         LEGACY_FOUND=1
     fi
     

@@ -240,7 +240,7 @@ class CLI:
                 "ask": []
             },
             "read_config_from": {
-                "codium": False,
+                "codeium": False,
                 "windsurf": False,
                 "claude": False
             }
