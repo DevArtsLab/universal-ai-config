@@ -1,0 +1,371 @@
+"""
+CLI interface for universal AI configuration management.
+"""
+
+import json
+import sys
+from pathlib import Path
+from typing import Optional
+from .environment import AgentEnv, find_project_root
+from .config import UnifiedConfig, ConfigError
+from .migration import ProviderMigrator, MigrationError
+
+
+class CLI:
+    """Command-line interface for AI configuration management."""
+    
+    def __init__(self):
+        self.env = AgentEnv()
+        self.config = UnifiedConfig(self.env)
+        self.migrator = ProviderMigrator(self.env)
+    
+    def init(self, fresh: bool = False) -> None:
+        """Initialize new unified configuration structure."""
+        print("Initializing universal AI configuration...")
+        
+        if fresh and self.env.config.exists():
+            print(f"Removing existing config at: {self.env.config}")
+            shutil.rmtree(self.env.config)
+        
+        # Create directory structure
+        created = self.env.initialize_dirs()
+        for dir_path in created:
+            print(f"  Created: {dir_path}")
+        
+        # Create default unified config
+        if not self.config.unified_config_path.exists():
+            default_config = self.config._get_default_config()
+            self.config.save_unified(default_config)
+            print(f"  Created: {self.config.unified_config_path}")
+        
+        # Create default AGENTS.md
+        agents_md = self.env.config / "AGENTS.md"
+        if not agents_md.exists():
+            agents_md.write_text("# Universal AI Configuration\n\n## Global Rules\n\nAdd your global AI agent rules here.\n")
+            print(f"  Created: {agents_md}")
+        
+        print("\n✓ Initialization complete")
+        print(f"Config directory: {self.env.config}")
+    
+    def migrate(self, provider: Optional[str] = None, project: bool = False) -> None:
+        """Migrate existing provider configurations."""
+        print("Starting migration...")
+        
+        if project:
+            # Migrate project configs
+            project_root = find_project_root()
+            if not project_root:
+                print("Error: Not in a project directory (no .git or .ai found)")
+                return
+            
+            print(f"Migrating project at: {project_root}")
+            self.migrator.migrate_project(project_root)
+        else:
+            # Migrate user configs
+            if provider:
+                # Migrate specific provider
+                try:
+                    self.migrator.migrate_provider(provider)
+                except MigrationError as e:
+                    print(f"Error: {e}")
+                    sys.exit(1)
+            else:
+                # Migrate all detected providers
+                results = self.migrator.migrate_all()
+                if not results:
+                    print("No legacy configurations found to migrate")
+                    return
+        
+        print("\n✓ Migration complete")
+        print("Run 'ai-config validate' to verify the setup")
+    
+    def validate(self) -> None:
+        """Validate the unified configuration setup."""
+        print("Validating configuration...")
+        
+        issues = []
+        
+        # Check directories exist
+        required_dirs = [
+            self.env.config,
+            self.env.data,
+            self.env.state,
+            self.env.cache
+        ]
+        
+        for dir_path in required_dirs:
+            if not dir_path.exists():
+                issues.append(f"Missing directory: {dir_path}")
+            else:
+                print(f"  ✓ Directory exists: {dir_path}")
+        
+        # Check unified config
+        if not self.config.unified_config_path.exists():
+            issues.append(f"Missing unified config: {self.config.unified_config_path}")
+        else:
+            try:
+                config = self.config.load_unified()
+                print(f"  ✓ Unified config valid: {self.config.unified_config_path}")
+                
+                # Validate structure
+                required_keys = ["shared", "providers", "mcpServers", "skills"]
+                for key in required_keys:
+                    if key not in config:
+                        issues.append(f"Missing key in config: {key}")
+                    else:
+                        print(f"    ✓ Contains: {key}")
+                
+                # Validate provider configs
+                for provider, settings in config.get("providers", {}).items():
+                    print(f"  ✓ Provider config: {provider}")
+                
+                # Validate MCP servers
+                for server in config.get("mcpServers", {}).keys():
+                    print(f"  ✓ MCP server: {server}")
+                
+            except ConfigError as e:
+                issues.append(f"Invalid unified config: {e}")
+        
+        # Check skills directory
+        skills_dir = self.env.config / "skills"
+        if skills_dir.exists():
+            skill_count = len(list(skills_dir.glob("*/SKILL.md")))
+            print(f"  ✓ Skills directory: {skill_count} skills found")
+        
+        # Check project config if in project
+        project_root = find_project_root()
+        if project_root:
+            ai_dir = project_root / ".ai"
+            if ai_dir.exists():
+                print(f"  ✓ Project config: {ai_dir}")
+                
+                if (ai_dir / "config.json").exists():
+                    print(f"    ✓ Project config.json exists")
+                if (ai_dir / "config.local.json").exists():
+                    print(f"    ✓ Project config.local.json exists")
+        
+        # Report results
+        if issues:
+            print("\n❌ Validation failed:")
+            for issue in issues:
+                print(f"  - {issue}")
+            sys.exit(1)
+        else:
+            print("\n✓ All validations passed")
+    
+    def status(self) -> None:
+        """Show current configuration status."""
+        print("Universal AI Configuration Status")
+        print("=" * 40)
+        
+        # Config locations
+        print(f"\nConfig directory: {self.env.config}")
+        print(f"Data directory: {self.env.data}")
+        print(f"State directory: {self.env.state}")
+        print(f"Cache directory: {self.env.cache}")
+        
+        # Unified config status
+        if self.config.unified_config_path.exists():
+            print(f"\n✓ Unified config exists")
+            config = self.config.load_unified()
+            
+            # Providers
+            providers = config.get("providers", {})
+            if providers:
+                print(f"\nConfigured providers: {', '.join(providers.keys())}")
+            else:
+                print(f"\nNo providers configured yet")
+            
+            # MCP servers
+            mcp_servers = config.get("mcpServers", {})
+            if mcp_servers:
+                print(f"MCP servers: {', '.join(mcp_servers.keys())}")
+            else:
+                print(f"MCP servers: None")
+            
+            # Skills
+            skills = config.get("skills", {})
+            enabled = skills.get("enabled", [])
+            if enabled:
+                print(f"Enabled skills: {', '.join(enabled)}")
+            else:
+                print(f"Enabled skills: None")
+        else:
+            print(f"\n✗ Unified config not found")
+            print(f"Run 'ai-config init' to create it")
+        
+        # Project status
+        project_root = find_project_root()
+        if project_root:
+            ai_dir = project_root / ".ai"
+            print(f"\n✓ Project detected: {project_root}")
+            if ai_dir.exists():
+                print(f"  Project config: {ai_dir}")
+            else:
+                print(f"  No .ai/ directory in project")
+                print(f"  Run 'ai-config init-project' to create it")
+        else:
+            print(f"\nNot in a project directory")
+    
+    def init_project(self) -> None:
+        """Initialize .ai/ directory in current project."""
+        project_root = find_project_root()
+        if not project_root:
+            print("Error: Not in a git repository")
+            print("Initialize a git repository first, or run in an existing project")
+            sys.exit(1)
+        
+        ai_dir = project_root / ".ai"
+        if ai_dir.exists():
+            print(f"Project already initialized: {ai_dir}")
+            return
+        
+        print(f"Initializing .ai/ in {project_root}")
+        ai_dir.mkdir()
+        
+        # Create project config
+        project_config = ai_dir / "config.json"
+        project_config.write_text(json.dumps({
+            "permissions": {
+                "allow": [],
+                "deny": [],
+                "ask": []
+            },
+            "read_config_from": {
+                "cursor": False,
+                "windsurf": False,
+                "claude": False
+            }
+        }, indent=2))
+        print(f"  Created: {project_config}")
+        
+        # Create project AGENTS.md
+        agents_md = ai_dir / "AGENTS.md"
+        agents_md.write_text("# Project Rules\n\nAdd project-specific AI agent rules here.\n")
+        print(f"  Created: {agents_md}")
+        
+        # Create skills directory
+        skills_dir = ai_dir / "skills"
+        skills_dir.mkdir()
+        print(f"  Created: {skills_dir}")
+        
+        # Update .gitignore
+        gitignore = project_root / ".gitignore"
+        gitignore_content = ""
+        if gitignore.exists():
+            gitignore_content = gitignore.read_text()
+        
+        local_configs = [
+            ".ai/config.local.json",
+            ".ai/mcp_config.local.json"
+        ]
+        
+        additions = []
+        for local_config in local_configs:
+            if local_config not in gitignore_content:
+                additions.append(local_config)
+        
+        if additions:
+            with open(gitignore, 'a') as f:
+                f.write("\n# AI local configs\n")
+                for addition in additions:
+                    f.write(f"{addition}\n")
+            print(f"  Updated .gitignore")
+        
+        print("\n✓ Project initialization complete")
+    
+    def get_config(self, provider: str) -> None:
+        """Get and display configuration for a specific provider."""
+        try:
+            config = self.config.get_provider_config(provider)
+            print(f"Configuration for {provider}:")
+            print(json.dumps(config, indent=2))
+        except ConfigError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+    
+    def set_config(self, provider: str, key: str, value: str) -> None:
+        """Set a configuration value for a provider."""
+        try:
+            # Parse value (handle JSON, numbers, booleans)
+            try:
+                parsed_value = json.loads(value)
+            except json.JSONDecodeError:
+                parsed_value = value
+            
+            settings = {key: parsed_value}
+            self.config.update_provider(provider, settings)
+            print(f"✓ Set {key} for {provider}")
+        except ConfigError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+
+
+import shutil
+
+
+def main():
+    """Main CLI entry point."""
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description="Universal AI Configuration Manager",
+        prog="ai-config"
+    )
+    
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+    
+    # init command
+    init_parser = subparsers.add_parser("init", help="Initialize new configuration")
+    init_parser.add_argument("--fresh", action="store_true", help="Remove existing config and start fresh")
+    
+    # migrate command
+    migrate_parser = subparsers.add_parser("migrate", help="Migrate existing configurations")
+    migrate_parser.add_argument("provider", nargs="?", help="Specific provider to migrate")
+    migrate_parser.add_argument("--project", action="store_true", help="Migrate project configs")
+    
+    # validate command
+    subparsers.add_parser("validate", help="Validate configuration setup")
+    
+    # status command
+    subparsers.add_parser("status", help="Show configuration status")
+    
+    # init-project command
+    subparsers.add_parser("init-project", help="Initialize .ai/ in current project")
+    
+    # get-config command
+    get_config_parser = subparsers.add_parser("get-config", help="Get provider configuration")
+    get_config_parser.add_argument("provider", help="Provider name")
+    
+    # set-config command
+    set_config_parser = subparsers.add_parser("set-config", help="Set provider configuration")
+    set_config_parser.add_argument("provider", help="Provider name")
+    set_config_parser.add_argument("key", help="Configuration key")
+    set_config_parser.add_argument("value", help="Configuration value")
+    
+    args = parser.parse_args()
+    
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+    
+    cli = CLI()
+    
+    if args.command == "init":
+        cli.init(fresh=args.fresh)
+    elif args.command == "migrate":
+        cli.migrate(provider=args.provider, project=args.project)
+    elif args.command == "validate":
+        cli.validate()
+    elif args.command == "status":
+        cli.status()
+    elif args.command == "init-project":
+        cli.init_project()
+    elif args.command == "get-config":
+        cli.get_config(args.provider)
+    elif args.command == "set-config":
+        cli.set_config(args.provider, args.key, args.value)
+
+
+if __name__ == "__main__":
+    main()

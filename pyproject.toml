@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "universal-ai-config"
+version = "0.1.0"
+description = "Unified configuration management for AI agents across multiple providers"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "Universal AI Config", email = "universal-ai@example.com"}
+]
+keywords = ["ai", "configuration", "devin", "cursor", "windsurf", "claude", "mcp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.8"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "mypy>=1.0",
+]
+
+[project.scripts]
+ai-config = "universal_ai_config.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/DevArtsLab/universal-ai-config"
+Repository = "https://github.com/DevArtsLab/universal-ai-config"
+Issues = "https://github.com/DevArtsLab/universal-ai-config/issues"
+
+[tool.setuptools]
+packages = ["universal_ai_config"]
+
+[tool.setuptools.package-data]
+universal_ai_config = ["*.md"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
