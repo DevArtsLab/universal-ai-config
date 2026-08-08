@@ -7,7 +7,7 @@ name = "universal-ai-config"
 version = "0.1.0"
 description = "Unified configuration management for AI agents across multiple providers"
 readme = "README.md"
-license = "MIT"
+license = {text = "MIT"}
 authors = [
     {name = "Universal AI Config", email = "universal-ai@example.com"}
 ]
