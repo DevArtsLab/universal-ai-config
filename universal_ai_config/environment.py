@@ -1,6 +1,6 @@
 """
 Environment management for universal AI configuration.
-All agent-related data is consolidated under ~/.agent/
+All agent-related data is consolidated under ~/.agents/
 """
 
 import os
@@ -10,19 +10,19 @@ from typing import List, Optional
 
 
 class AgentEnv:
-    """Manages the ~/.agent directory structure for AI agent configuration."""
+    """Manages the ~/.agents directory structure for AI agent configuration."""
     
     def __init__(self, app_name: str = "agent"):
         self.app_name = app_name
         self.home = Path.home()
         self.system = platform.system()
         
-        # Base directory: ~/.agent (or user override)
+        # Base directory: ~/.agents (or user override)
         agent_base = os.getenv("AGENT_CONFIG_HOME")
         if agent_base:
             self.base = Path(agent_base)
         else:
-            self.base = self.home / ".agent"
+            self.base = self.home / ".agents"
     
     @property
     def base_dir(self) -> Path:

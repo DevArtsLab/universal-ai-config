@@ -74,7 +74,7 @@ ai-config migrate --project
 ### User-Global Configuration
 
 ```
-~/.agent/                  # All agent data in one place
+~/.agents/                  # All agent data in one place
   ├── config/
   │   ├── config.json     # Unified config (all providers read this)
   │   └── AGENTS.md       # Shared rules
@@ -105,7 +105,7 @@ ai-config migrate --project
 
 ## Configuration Format
 
-### Unified Config (`~/.agent/config/config.json`)
+### Unified Config (`~/.agents/config/config.json`)
 
 ```json
 {
@@ -131,7 +131,7 @@ ai-config migrate --project
   },
   "skills": {
     "enabled": [],
-    "paths": ["~/.agent/skills/", ".ai/skills/"]
+    "paths": ["~/.agents/skills/", ".ai/skills/"]
   }
 }
 ```

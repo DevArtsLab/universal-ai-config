@@ -6,7 +6,7 @@ This guide explains how AI providers (Devin, Codium, Windsurf, Claude, etc.) can
 
 The universal AI configuration system provides:
 
-- **Single source of truth**: All providers read from `~/.agent/config/config.json`
+- **Single source of truth**: All providers read from `~/.agents/config/config.json`
 - **Project-local overrides**: `.ai/config.json` and `.ai/config.local.json` in projects
 - **Shared resources**: MCP servers and skills shared across providers
 - **Provider-specific overrides**: Each provider can have custom settings
@@ -100,7 +100,7 @@ def get_effective_config(provider_name: str, cwd: Path) -> dict:
 
 ### Unified Config Format
 
-The unified config file (`~/.agent/config/config.json`) has this structure:
+The unified config file (`~/.agents/config/config.json`) has this structure:
 
 ```json
 {
@@ -130,7 +130,7 @@ The unified config file (`~/.agent/config/config.json`) has this structure:
   "skills": {
     // Shared skills configuration
     "enabled": ["skill-name"],
-    "paths": ["~/.agent/skills/", ".ai/skills/"]
+    "paths": ["~/.agents/skills/", ".ai/skills/"]
   }
 }
 ```
@@ -141,8 +141,8 @@ When reading configuration, use this precedence (highest to lowest):
 
 1. Project local overrides (`.ai/config.local.json`)
 2. Project shared config (`.ai/config.json`)
-3. Provider-specific settings (in `~/.agent/config/config.json`)
-4. Shared settings (in `~/.agent/config/config.json`)
+3. Provider-specific settings (in `~/.agents/config/config.json`)
+4. Shared settings (in `~/.agents/config/config.json`)
 
 ## Migration Support
 
