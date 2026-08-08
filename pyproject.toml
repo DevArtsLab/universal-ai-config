@@ -11,7 +11,7 @@ license = {file = "LICENSE"}
 authors = [
     {name = "Universal AI Config", email = "universal-ai@example.com"}
 ]
-keywords = ["ai", "configuration", "devin", "cursor", "windsurf", "claude", "mcp"]
+keywords = ["ai", "configuration", "devin", "codium", "windsurf", "claude", "mcp"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

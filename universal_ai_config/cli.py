@@ -232,7 +232,7 @@ class CLI:
                 "ask": []
             },
             "read_config_from": {
-                "cursor": False,
+                "codium": False,
                 "windsurf": False,
                 "claude": False
             }

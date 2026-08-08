@@ -32,9 +32,9 @@ class ProviderMigrator:
             "rules": "~/.config/devin/AGENTS.md",
             "project_rules": "AGENTS.md"
         },
-        "cursor": {
-            "user": "~/.cursor/config.json",
-            "project": ".cursor/config.json"
+        "codium": {
+            "user": "~/.codium/config.json",
+            "project": ".codium/config.json"
         },
         "windsurf": {
             "user": "~/.windsurf/config.json",

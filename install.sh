@@ -232,8 +232,8 @@ detect_legacy_configs() {
         LEGACY_FOUND=1
     fi
     
-    if [ -d "${HOME}/.cursor" ]; then
-        print_warning "Found Cursor config at ~/.cursor"
+    if [ -d "${HOME}/.codium" ]; then
+        print_warning "Found Codium config at ~/.codium"
         LEGACY_FOUND=1
     fi
     
