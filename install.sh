@@ -270,11 +270,6 @@ detect_legacy_configs() {
         LEGACY_FOUND=1
     fi
     
-    if [ -d "${HOME}/.codeium" ]; then
-        print_warning "Found Codeium config at ~/.codeium"
-        LEGACY_FOUND=1
-    fi
-    
     if [ -d "${HOME}/.windsurf" ]; then
         print_warning "Found Windsurf config at ~/.windsurf"
         LEGACY_FOUND=1

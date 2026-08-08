@@ -193,7 +193,6 @@ class UnifiedConfig:
                 ]
             },
             "read_config_from": {
-                "codeium": False,
                 "windsurf": False,
                 "claude": False
             }

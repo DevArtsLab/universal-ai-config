@@ -1,6 +1,6 @@
 # Provider Integration Guide
 
-This guide explains how AI providers (Devin, Codeium, Windsurf, Claude, etc.) can integrate with the universal AI configuration system.
+This guide explains how AI providers (Devin, Windsurf, Claude, etc.) can integrate with the universal AI configuration system.
 
 ## Overview
 
@@ -32,7 +32,7 @@ env = AgentEnv()
 config = UnifiedConfig(env)
 
 # Get provider-specific configuration
-provider_name = "your-provider-name"  # e.g., "devin", "codeium"
+provider_name = "your-provider-name"  # e.g., "devin", "windsurf"
 provider_config = config.get_provider_config(provider_name)
 
 # Get merged configuration (user + project)

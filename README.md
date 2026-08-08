@@ -1,6 +1,6 @@
 # Universal AI Configuration
 
-A unified configuration system for AI agents across multiple providers (Devin, Codeium, Windsurf, Claude, etc.). This tool provides a single source of truth for AI agent settings, skills, MCP servers, and rules.
+A unified configuration system for AI agents across multiple providers (Devin, Windsurf, Claude, etc.). This tool provides a single source of truth for AI agent settings, skills, MCP servers, and rules.
 
 ## Features
 
@@ -221,7 +221,6 @@ config = UnifiedConfig(env)
 
 # Get provider-specific config
 devin_config = config.get_provider_config("devin")
-codeium_config = config.get_provider_config("codeium")
 
 # Get merged config (user + project)
 merged_config = config.get_merged_config(cwd=Path.cwd())
@@ -232,7 +231,6 @@ merged_config = config.get_merged_config(cwd=Path.cwd())
 The tool automatically detects and migrates from:
 
 - **Devin CLI**: `~/.config/devin/config.json`, `.devin/config.json`
-- **Codeium**: `~/.codeium/config.json`, `.codeium/config.json`
 - **Windsurf**: `~/.windsurf/config.json`, `.windsurf/config.json`
 - **Claude**: `~/.config/claude/config.json`, `.claude/config.json`
 
