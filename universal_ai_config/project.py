@@ -4,7 +4,7 @@ Project-local configuration management.
 
 import json
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from .environment import AgentEnv, find_project_root
 from .config import deep_merge, load_json, save_json, ConfigError
 
@@ -70,7 +70,7 @@ class ProjectConfig:
         
         save_json(config_path, merged)
     
-    def get_project_skills(self) -> list[Path]:
+    def get_project_skills(self) -> List[Path]:
         """Get all project skill directories."""
         if not self.is_in_project():
             return []

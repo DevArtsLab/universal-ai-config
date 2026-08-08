@@ -383,11 +383,12 @@ main() {
     print_success "Installation complete!"
     echo ""
     
-    # Check for legacy configs
+    # Always initialize a fresh config first
+    initialize_config
+    
+    # Check for legacy configs and migrate if present
     if prompt_migration; then
         migrate_configs
-    else
-        initialize_config
     fi
     
     # Validate

@@ -6,7 +6,7 @@ All agent-related data is consolidated under ~/.agent/
 import os
 import platform
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 
 class AgentEnv:
@@ -69,7 +69,7 @@ class AgentEnv:
         
         return None
     
-    def initialize_dirs(self) -> list[Path]:
+    def initialize_dirs(self) -> List[Path]:
         """Creates the directory structure safely."""
         dirs = [self.base, self.config, self.skills, self.data, self.state, self.cache]
         created = []
@@ -88,7 +88,7 @@ class AgentEnv:
         
         return created
     
-    def get_config_precedence(self, cwd: Optional[Path] = None) -> list[Path]:
+    def get_config_precedence(self, cwd: Optional[Path] = None) -> List[Path]:
         """Returns config paths in precedence order (highest to lowest)."""
         precedence = []
         
